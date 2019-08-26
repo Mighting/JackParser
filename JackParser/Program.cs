@@ -11,6 +11,9 @@ namespace JackParser
 {
     class Program
     {
+
+        public static Dictionary<string, string> programStructure = new Dictionary<string, string>();
+
         public static List<string> keywordList = new List<string>();
         public static List<string> symbolList = new List<string>();
         public static List<string> jackToParse = new List<string>();
@@ -19,10 +22,8 @@ namespace JackParser
         public static string identifier = "";
         public static string[] jackFileSplit;
         //Best sorting pattern EU
-        public static string pattern = "([(])|([)])|[ ]|([;])|([{])|([}])|[\\t]";
+        public static string pattern = "([(])|([)])|[ ]|([;])|([{])|([}])|[\t]|([.])|([,])|([]])|([[])|([-])|([/])|([*])|([+])";
 
-
-        public static string lineToRead = "";
 
 
         static void Main(string[] args)
@@ -45,11 +46,10 @@ namespace JackParser
                 {
                     while ((jackFile = sr.ReadLine()) != null)
                     {
-                        //Work with this, basicly look at what you did in the other script!"!!!"!!"#""!!"!"#"!""!#!"#"!#!"#!"#!"#!"#
-                        jackFile = jackFile.Split('/')[0];
-                        if (jackFile.StartsWith(""))
+                        jackFile = Regex.Split(jackFile,"//")[0];
+                        if (jackFile.StartsWith("//") || jackFile.StartsWith("/") || jackFile == "")
                         {
-
+                            //Do nothing Eg. skips
                         }
                         else
                         {
@@ -59,87 +59,87 @@ namespace JackParser
                                 jackToParse.Add(entry);
                             }
                         }
-
-                        
                     }
 
+                    jackFileSplit = jackToParse.ToArray();
+                    string[] filename = file.Split('\\', '.');
+
+                    using (XmlWriter writer = XmlWriter.Create($"{filename[filename.Length - 2]}.xml", settings))
+                    {
+                        writer.WriteStartElement(jackFileSplit[0]);
+                        while (jackFileSplit.Length != 0)
+                        {
+                            //Check for nothing and Comments
+                            if (jackFileSplit[0] == "" || jackFileSplit[0].StartsWith("//"))
+                            {
+                                string toRemove = jackFileSplit[0];
+                                List<string> tmp = new List<string>(jackFileSplit);
+                                tmp.Remove(toRemove);
+                                jackFileSplit = tmp.ToArray();
+                            }
+
+                            //Check if its a keyword
+                            else if (WriteKeyWord(jackFileSplit) != null)
+                            {
+                                writer.WriteElementString("keyword", WriteKeyWord(jackFileSplit));
+                                string toRemove = jackFileSplit[0];
+                                List<string> tmp = new List<string>(jackFileSplit);
+                                tmp.Remove(toRemove);
+                                jackFileSplit = tmp.ToArray();
+                            }
+
+                            //Check if its a symbol
+                            else if (WriteSymbol(jackFileSplit) != null)
+                            {
+                                writer.WriteElementString("symbol", WriteSymbol(jackFileSplit));
+                                string toRemove = jackFileSplit[0];
+                                List<string> tmp = new List<string>(jackFileSplit);
+                                tmp.Remove(toRemove);
+                                jackFileSplit = tmp.ToArray();
+                            }
+
+                            //Check if its an integer
+                            else if (int.TryParse(jackFileSplit[0], out integerConstant))
+                            {
+                                writer.WriteElementString("integerConstant", integerConstant.ToString());
+                                string toRemove = jackFileSplit[0];
+                                List<string> tmp = new List<string>(jackFileSplit);
+                                tmp.Remove(toRemove);
+                                jackFileSplit = tmp.ToArray();
+                            }
+
+                            //Check if its a string
+                            else if (jackFileSplit[0].StartsWith("\""))
+                            {
+                                stringConstant = jackFileSplit[0].Split('"')[1] + " " + jackFileSplit[1].Split('"')[0];
+                                writer.WriteElementString("stringConstant", stringConstant);
+                                string toRemove = jackFileSplit[0];
+                                List<string> tmp = new List<string>(jackFileSplit);
+                                tmp.Remove(toRemove);
+                                jackFileSplit = tmp.ToArray();
+
+                                toRemove = jackFileSplit[0];
+                                tmp = new List<string>(jackFileSplit);
+                                tmp.Remove(toRemove);
+                                jackFileSplit = tmp.ToArray();
+                            }
+
+                            //Else it gotta be an Identifier
+                            else
+                            {
+                                identifier = jackFileSplit[0];
+                                writer.WriteElementString("identifier", identifier);
+                                string toRemove = jackFileSplit[0];
+                                List<string> tmp = new List<string>(jackFileSplit);
+                                tmp.Remove(toRemove);
+                                jackFileSplit = tmp.ToArray();
+                            }
+                        }
+
+                        writer.WriteEndElement();
+                        writer.Flush();
+                    }
                 }
-            }
-
-            jackFileSplit = jackToParse.ToArray();
-
-            using (XmlWriter writer = XmlWriter.Create($"simpletokentest.xml", settings))
-            {
-                writer.WriteStartElement("tokens");
-                while (jackFileSplit.Length != 0)
-                {
-                    //Check for nothing and Comments
-                    if (jackFileSplit[0] == "" || jackFileSplit[0].StartsWith("//"))
-                    {
-                        string toRemove = jackFileSplit[0];
-                        List<string> tmp = new List<string>(jackFileSplit);
-                        tmp.Remove(toRemove);
-                        jackFileSplit = tmp.ToArray();
-                    }
-
-                    //Check if its a keyword
-                    else if (WriteKeyWord(jackFileSplit) != null)
-                    {
-                        writer.WriteElementString("keyword", WriteKeyWord(jackFileSplit));
-                        string toRemove = jackFileSplit[0];
-                        List<string> tmp = new List<string>(jackFileSplit);
-                        tmp.Remove(toRemove);
-                        jackFileSplit = tmp.ToArray();
-                    }
-
-                    //Check if its a symbol
-                    else if (WriteSymbol(jackFileSplit) != null)
-                    {
-                        writer.WriteElementString("symbol", WriteSymbol(jackFileSplit));
-                        string toRemove = jackFileSplit[0];
-                        List<string> tmp = new List<string>(jackFileSplit);
-                        tmp.Remove(toRemove);
-                        jackFileSplit = tmp.ToArray();
-                    }
-
-                    //Check if its an integer
-                    else if (int.TryParse(jackFileSplit[0], out integerConstant))
-                    {
-                        writer.WriteElementString("integerConstant", integerConstant.ToString());
-                        string toRemove = jackFileSplit[0];
-                        List<string> tmp = new List<string>(jackFileSplit);
-                        tmp.Remove(toRemove);
-                        jackFileSplit = tmp.ToArray();
-                    }
-
-                    else if (jackFileSplit[0].StartsWith("\""))
-                    {
-                        stringConstant = jackFileSplit[0].Split('"')[1];
-                        writer.WriteElementString("stringConstant", stringConstant);
-                        string toRemove = jackFileSplit[0];
-                        List<string> tmp = new List<string>(jackFileSplit);
-                        tmp.Remove(toRemove);
-                        jackFileSplit = tmp.ToArray();
-                    }
-
-                    //Else it gotta be an Identifier
-                    else
-                    {
-                        identifier = jackFileSplit[0];
-                        writer.WriteElementString("identifier", identifier);
-                        string toRemove = jackFileSplit[0];
-                        List<string> tmp = new List<string>(jackFileSplit);
-                        tmp.Remove(toRemove);
-                        jackFileSplit = tmp.ToArray();
-                    }
-                }
-
-
-
-
-
-                writer.WriteEndElement();
-                writer.Flush();
             }
         }
 
@@ -181,42 +181,6 @@ namespace JackParser
             }
             return null;
         }
-
-        //public static void DefineClass()
-        //{
-        //    string definedclass = "class " + identifier + "{" + DefineClassVarDec();
-        //}
-
-        //public static string DefineClassVarDec()
-        //{
-        //    string staticOrField = "";
-        //    string varName = "";
-        //    string definedClassVarDec = "";
-
-        //    if (jackFile.Contains("static"))
-        //    {
-        //        foreach (string keyword in keywordList)
-        //        {
-        //            if (keyword == "static")
-        //            {
-        //                staticOrField = "static";
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        staticOrField = "field";
-        //    }
-
-        //    definedClassVarDec = $"({staticOrField})";
-        //    return null;
-
-        //}
-
-        //public static string DefineVarName()
-        //{
-        //    return identifier;
-        //}
 
         public static void FillSymbol()
         {
